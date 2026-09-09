@@ -11,7 +11,18 @@ type AccountOrder = {
   items: Array<{ title: string; quantity: number; price: number }>
   subtotal: number
   paymentMethod?: string
+  delivery?: {
+    fullName?: string
+    governorate?: string
+    address?: string
+  }
   createdAt?: { seconds?: number }
+}
+
+type SavedAddress = {
+  fullName: string
+  governorate: string
+  address: string
 }
 
 const formatPrice = (price: number) => `EGP ${price.toFixed(2)}`
@@ -24,6 +35,24 @@ export default function AccountPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true)
   const [orders, setOrders] = useState<AccountOrder[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const displayName = user?.displayName || 'Shopper'
+
+  const savedAddresses = orders.reduce<SavedAddress[]>((addresses, order) => {
+    const delivery = order.delivery
+    if (!delivery?.address || !delivery.governorate) return addresses
+
+    const isDuplicate = addresses.some(savedAddress =>
+      savedAddress.address === delivery.address && savedAddress.governorate === delivery.governorate
+    )
+    if (!isDuplicate) {
+      addresses.push({
+        fullName: delivery.fullName || displayName,
+        governorate: delivery.governorate,
+        address: delivery.address,
+      })
+    }
+    return addresses
+  }, [])
 
   const loadOrders = async (uid: string) => {
     setOrdersLoading(true)
@@ -67,7 +96,6 @@ export default function AccountPage(): JSX.Element {
     )
   }
 
-  const displayName = user.displayName || 'Shopper'
   const email = user.email || 'No email available'
 
   return (
@@ -129,7 +157,15 @@ export default function AccountPage(): JSX.Element {
 
             <section className="profile-card profile-list-card" id="addresses">
               <div className="profile-card-heading"><div><span className="profile-card-label">Delivery</span><h2>Saved addresses</h2></div><button type="button">+ Add address</button></div>
-              <p className="profile-empty">No saved addresses yet. Add one during checkout to use it next time.</p>
+              {savedAddresses.length === 0 ? <p className="profile-empty">No saved addresses yet. Add one during checkout to use it next time.</p> : (
+                <div className="saved-addresses">
+                  {savedAddresses.map(savedAddress => <article className="saved-address" key={`${savedAddress.governorate}-${savedAddress.address}`}>
+                    <strong>{savedAddress.fullName}</strong>
+                    <span>{savedAddress.address}</span>
+                    <small>{savedAddress.governorate}</small>
+                  </article>)}
+                </div>
+              )}
             </section>
 
             <section className="profile-card profile-list-card" id="settings">

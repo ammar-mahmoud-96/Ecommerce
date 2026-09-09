@@ -1,10 +1,23 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
 import { RootState } from '../store'
 import { clearCart } from '../store/slices/cartSlice'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { getFirebaseAuth, getFirebaseDb } from '../lib/firebase'
+import { getDocs, query, where } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
+
+type SavedCheckoutData = {
+  email: string
+  phoneCountryCode: string
+  phone: string
+  alternativePhoneCountryCode: string
+  alternativePhone: string
+  fullName: string
+  governorate: string
+  address: string
+}
 
 const formatPrice = (price: number) => `EGP ${price.toFixed(2)}`
 const getSaleAmount = (price: number, oldPrice?: number) => oldPrice && oldPrice > price ? oldPrice - price : 0
@@ -18,14 +31,66 @@ export default function Checkout() {
   const router = useRouter()
   const cartItems = useSelector((state: RootState) => state.cart.items)
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('cash')
-  const [governorate, setGovernorate] = useState('')
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [toast, setToast] = useState('')
+  const [checkoutData, setCheckoutData] = useState<SavedCheckoutData>({
+    email: '',
+    phoneCountryCode: '+20',
+    phone: '',
+    alternativePhoneCountryCode: '+20',
+    alternativePhone: '',
+    fullName: '',
+    governorate: '',
+    address: '',
+  })
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const totalSavings = cartItems.reduce((sum, item) => sum + getSaleAmount(item.price, item.oldPrice) * item.quantity, 0)
+
+  useEffect(() => {
+    let active = true
+
+    const loadSavedCheckoutData = async (user: ReturnType<typeof getFirebaseAuth>['currentUser']) => {
+      try {
+        if (!user) return
+
+        const snapshot = await getDocs(query(collection(getFirebaseDb(), 'orders'), where('userId', '==', user.uid)))
+        const orders = snapshot.docs.map(document => document.data())
+        orders.sort((first, second) => (second.createdAt?.seconds || 0) - (first.createdAt?.seconds || 0))
+        const latestOrder = orders[0]
+        if (!active || !latestOrder) return
+
+        const contact = latestOrder.contact || {}
+        const delivery = latestOrder.delivery || {}
+        setCheckoutData({
+          email: contact.email || user.email || '',
+          phoneCountryCode: contact.phoneCountryCode || '+20',
+          phone: contact.phone || '',
+          alternativePhoneCountryCode: contact.alternativePhoneCountryCode || '+20',
+          alternativePhone: contact.alternativePhone || '',
+          fullName: delivery.fullName || '',
+          governorate: delivery.governorate || '',
+          address: delivery.address || '',
+        })
+      } catch (error) {
+        console.error('Unable to load saved checkout data:', error)
+      }
+    }
+
+    let unsubscribe: (() => void) | undefined
+    try {
+      unsubscribe = onAuthStateChanged(getFirebaseAuth(), user => { void loadSavedCheckoutData(user) })
+    } catch (error) {
+      console.error('Unable to initialize saved checkout data:', error)
+    }
+
+    return () => {
+      active = false
+      unsubscribe?.()
+    }
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -126,18 +191,18 @@ export default function Checkout() {
           <section className="checkout-section contact-section">
             <h1>Contact</h1>
             <label htmlFor="email">Email <span>(Optional)</span></label>
-            <div className="checkout-input has-icon"><span aria-hidden="true">&#9993;</span><input id="email" name="email" type="email" placeholder="your.email@gmail.com" /></div>
+            <div className="checkout-input has-icon"><span aria-hidden="true">&#9993;</span><input id="email" name="email" type="email" placeholder="your.email@gmail.com" value={checkoutData.email} onChange={event => setCheckoutData(data => ({ ...data, email: event.target.value }))} /></div>
             <label htmlFor="phone">Phone <b>*</b></label>
-            <div className="phone-row"><select name="phone-country-code" aria-label="Phone country code" defaultValue="+20"><option>+20</option></select><div className="checkout-input has-icon"><span aria-hidden="true">&#9742;</span><input id="phone" name="phone" type="tel" placeholder="Phone Number" required /></div></div>
+            <div className="phone-row"><select name="phone-country-code" aria-label="Phone country code" value={checkoutData.phoneCountryCode} onChange={event => setCheckoutData(data => ({ ...data, phoneCountryCode: event.target.value }))}><option>+20</option></select><div className="checkout-input has-icon"><span aria-hidden="true">&#9742;</span><input id="phone" name="phone" type="tel" placeholder="Phone Number" value={checkoutData.phone} onChange={event => setCheckoutData(data => ({ ...data, phone: event.target.value }))} required /></div></div>
             <label htmlFor="alternate-phone">Alternative Phone <span>(Optional)</span></label>
-            <div className="phone-row"><select name="alternate-phone-country-code" aria-label="Alternative phone country code" defaultValue="+20"><option>+20</option></select><div className="checkout-input has-icon"><span aria-hidden="true">&#9742;</span><input id="alternate-phone" name="alternate-phone" type="tel" placeholder="Other Phone Number" /></div></div>
+            <div className="phone-row"><select name="alternate-phone-country-code" aria-label="Alternative phone country code" value={checkoutData.alternativePhoneCountryCode} onChange={event => setCheckoutData(data => ({ ...data, alternativePhoneCountryCode: event.target.value }))}><option>+20</option></select><div className="checkout-input has-icon"><span aria-hidden="true">&#9742;</span><input id="alternate-phone" name="alternate-phone" type="tel" placeholder="Other Phone Number" value={checkoutData.alternativePhone} onChange={event => setCheckoutData(data => ({ ...data, alternativePhone: event.target.value }))} /></div></div>
           </section>
           <section className="checkout-section delivery-section">
             <h2>Delivery</h2>
             <label htmlFor="full-name">Full Name <b>*</b></label>
-            <div className="checkout-input"><input id="full-name" name="full-name" placeholder="Your Name" required /></div>
-            <select className="checkout-select" name="governorate" value={governorate} onChange={event => setGovernorate(event.target.value)} required><option value="">Select Governorate</option><option value="cairo">Cairo</option><option value="giza">Giza</option><option value="alexandria">Alexandria</option></select>
-            <textarea className="checkout-textarea" name="address" placeholder="Address" rows={3} required />
+            <div className="checkout-input"><input id="full-name" name="full-name" placeholder="Your Name" value={checkoutData.fullName} onChange={event => setCheckoutData(data => ({ ...data, fullName: event.target.value }))} required /></div>
+            <select className="checkout-select" name="governorate" value={checkoutData.governorate} onChange={event => setCheckoutData(data => ({ ...data, governorate: event.target.value }))} required><option value="">Select Governorate</option><option value="cairo">Cairo</option><option value="giza">Giza</option><option value="alexandria">Alexandria</option></select>
+            <textarea className="checkout-textarea" name="address" placeholder="Address" rows={3} value={checkoutData.address} onChange={event => setCheckoutData(data => ({ ...data, address: event.target.value }))} required />
           </section>
           <section className="checkout-section discount-section">
             <label htmlFor="discount-code">Discount Code</label>

@@ -77,6 +77,10 @@ a{
 .account-order-header, .account-order-footer { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
 .account-order-header span, .account-order-footer span { color: #888; }
 .account-order-items { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0; color: #555; font-size: 11px; }
+.saved-addresses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.saved-address { display: flex; flex-direction: column; gap: 5px; padding: 14px; border: 1px solid #eee; border-radius: 8px; background: #fafafa; font-size: 12px; }
+.saved-address span { color: #555; line-height: 1.45; }
+.saved-address small { color: #888; font-size: 11px; }
 .profile-setting { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; align-items: center; padding: 15px 0; border-top: 1px solid #eee; font-size: 13px; }.profile-setting:first-of-type { margin-top: 18px; }.profile-setting small { color: #888; font-size: 11px; }.profile-toggle { grid-column: 2; grid-row: 1 / 3; width: 31px; height: 18px; border-radius: 999px; background: #ddd; }.profile-toggle::after { content: ''; display: block; width: 14px; height: 14px; margin: 2px; border-radius: 50%; background: #fff; }
 .profile-guest-page { display: grid; place-items: center; min-height: 55vh; }.profile-guest-card { width: min(480px, 100%); text-align: center; }.profile-guest-card h1 { margin: 10px 0; font-size: 28px; }.profile-guest-card p { margin-bottom: 22px; }
 
@@ -97,6 +101,7 @@ a{
 	.auth-copy h1, .profile-heading h1 { font-size: 31px; }
 	.auth-panel { width: min(calc(100% - 30px), 390px); }
 	.profile-card { padding: 18px; }
+	.saved-addresses { grid-template-columns: 1fr; }
 	.profile-welcome { align-items: flex-start; flex-direction: column; }
 	.profile-stats { grid-template-columns: 1fr; }
 	.profile-stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
