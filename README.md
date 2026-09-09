@@ -13,6 +13,8 @@ A responsive fashion e-commerce storefront built with ReactJS, Next.js, TypeScri
 - Redux-powered cart with quantity controls and sale pricing.
 - Checkout with contact, delivery, discount, payment, and order summary sections.
 - Responsive checkout layout with a mobile order-summary drawer and fixed order action bar.
+- Firebase email/password sign-in 
+- Responsive customer profile dashboard.
 - Contact form and checkout order emails sent through SMTP.
 
 ## Technology
@@ -70,6 +72,40 @@ SMTP_FROM=your-sender@gmail.com
 ```
 
 For Gmail, enable 2-Step Verification and create an App Password in Google Account security settings. Keep `.env.local` private; it is ignored by Git.
+
+### Firebase authentication setup
+
+Firebase Authentication handles email/password accounts. In the Firebase Console:
+
+1. Open **Build → Authentication → Sign-in method**.
+2. Enable **Email/Password**.
+3. Open **Project settings → Your apps** and register a Web app if one does not exist.
+4. Copy the Firebase Web SDK configuration values into `.env.local` using the `NEXT_PUBLIC_FIREBASE_*` names from `.env.example`.
+5. Restart the development server after changing environment variables.
+
+Firebase stores and hashes passwords through its Authentication service. The application never receives or stores a user's raw password.
+
+### Firestore order storage
+
+The checkout stores authenticated orders in a Firestore `orders` collection, and the profile page reads only orders belonging to the current Firebase user.
+
+1. In Firebase Console, open **Build -> Firestore Database** and create a database.
+2. Add rules that restrict each order to its owner:
+
+```text
+rules_version = '2';
+service cloud.firestore {
+	match /databases/{database}/documents {
+		match /orders/{orderId} {
+			allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+			allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+			allow update, delete: if false;
+		}
+	}
+}
+```
+
+Unauthenticated checkouts can still send an email, but their orders are not stored because there is no Firebase user ID to associate with them.
 
 ## Project Structure
 

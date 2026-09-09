@@ -66,12 +66,8 @@ export default function Footer(){
         <div className="footer-divider" />
 
         <div className="footer-bottom">
-          <div className="copyright">Shop.co © 2000-2026, All Rights Reserved</div>
-          <div className="payments">
-            <div className="payment-icon">VISA</div>
-            <div className="payment-icon">MC</div>
-            <div className="payment-icon">PayPal</div>
-          </div>
+          <div className="copyright">Shop.co ©2026, All Rights Reserved</div>
+          
         </div>
       </div>
     </footer>

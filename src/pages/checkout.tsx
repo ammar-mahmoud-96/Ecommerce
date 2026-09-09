@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
 import { RootState } from '../store'
 import { clearCart } from '../store/slices/cartSlice'
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { getFirebaseAuth, getFirebaseDb } from '../lib/firebase'
 
 const formatPrice = (price: number) => `EGP ${price.toFixed(2)}`
 const getSaleAmount = (price: number, oldPrice?: number) => oldPrice && oldPrice > price ? oldPrice - price : 0
@@ -58,6 +60,43 @@ export default function Checkout() {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error)
+
+      const user = getFirebaseAuth().currentUser
+      if (user) {
+        const firestoreItems = cartItems.map(item => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          ...(item.oldPrice !== undefined ? { oldPrice: item.oldPrice } : {}),
+          ...(item.image ? { image: item.image } : {}),
+          ...(item.size ? { size: item.size } : {}),
+          ...(item.color ? { color: item.color } : {}),
+        }))
+
+        await addDoc(collection(getFirebaseDb(), 'orders'), {
+          userId: user.uid,
+          userEmail: user.email || formData.get('email') || null,
+          contact: {
+            email: formData.get('email') || null,
+            phoneCountryCode: formData.get('phone-country-code') || null,
+            phone: formData.get('phone') || null,
+            alternativePhoneCountryCode: formData.get('alternate-phone-country-code') || null,
+            alternativePhone: formData.get('alternate-phone') || null,
+          },
+          delivery: {
+            fullName: formData.get('full-name'),
+            governorate: formData.get('governorate'),
+            address: formData.get('address'),
+          },
+          discountCode: formData.get('discount-code') || null,
+          paymentMethod,
+          items: firestoreItems,
+          subtotal,
+          totalSavings,
+          createdAt: serverTimestamp(),
+        })
+      }
       dispatch(clearCart())
       setToast('Your order has been sent successfully.')
       window.setTimeout(() => router.push('/'), 1500)
