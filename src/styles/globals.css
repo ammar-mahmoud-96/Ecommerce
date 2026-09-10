@@ -346,7 +346,7 @@ a{
 	.newsletter-left { text-align: left }
 	.newsletter-title { font-size: 20px }
 	.newsletter-right { align-items: stretch; flex: 1 1 auto }
-	.newsletter-input, .newsletter-cta { max-width: none }
+	.newsletter-input, .newsletter-cta {width: unset }
 }
 
 @media (max-width: 900px) {
