@@ -583,7 +583,7 @@ a{
 }
 
 @media (max-width: 700px) {
-	.header-inner { padding: 10px 12px; gap: 12px; flex-direction: column; align-items: stretch }
+	.header-inner { padding: 10px 12px; flex-direction: column; align-items: stretch }
 	.header-left { gap: 8px }
 	.header-nav { display: none }
 	.header-center { justify-content: flex-start }
