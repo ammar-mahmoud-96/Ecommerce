@@ -53,7 +53,7 @@ export default function AboutPage(): JSX.Element {
           </div>
         </section>
 
-        <p style={{ marginTop: 25 }}>
+        <p style={{ marginTop: 24 }}>
           Want to get in touch? Visit our <Link href="/contact">Contact page</Link>.
         </p>
       </div>
